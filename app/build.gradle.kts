@@ -20,29 +20,23 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.kapt)
     alias(libs.plugins.hilt.gradle)
-    alias(libs.plugins.ksp)
     alias(libs.plugins.compose.compiler)
 }
 
 android {
-    namespace = "com.amanzan.cleantemplate"
+    namespace = "com.checkout.mobilechallenge.albertomanzano"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.amanzan.cleantemplate"
+        applicationId = "com.checkout.mobilechallenge.albertomanzano"
         minSdk = 21
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 
-        testInstrumentationRunner = "com.amanzan.cleantemplate.HiltTestRunner"
+        testInstrumentationRunner = "com.checkout.mobilechallenge.albertomanzano.HiltTestRunner"
         vectorDrawables {
             useSupportLibrary = true
-        }
-
-        // Enable room auto-migrations
-        ksp {
-            arg("room.schemaLocation", "$projectDir/schemas")
         }
     }
 
@@ -60,6 +54,12 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
+    }
+
+    testOptions {
+        unitTests {
+            isReturnDefaultValues = true
+        }
     }
 
     buildFeatures {
@@ -103,9 +103,6 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.hilt.navigation.compose)
-    implementation(libs.androidx.room.runtime)
-    implementation(libs.androidx.room.ktx)
-    ksp(libs.androidx.room.compiler)
 
     // Compose
     implementation(libs.androidx.compose.ui)
@@ -126,6 +123,7 @@ dependencies {
     // Local tests: jUnit, coroutines, Android runner
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.mockito.core)
 
     // Instrumented tests: jUnit rules and runners
 

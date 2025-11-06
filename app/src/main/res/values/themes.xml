@@ -17,5 +17,5 @@
 
 <resources>
 
-    <style name="Theme.CleanTemplate" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.CheckoutMobileChallenge" parent="android:Theme.Material.Light.NoActionBar" />
 </resources>
