@@ -249,23 +249,32 @@ fun CardInputScreen(
             },
             trailingIcon = {
                 if (cardType != CardUtils.CardType.UNKNOWN) {
-                    Text(
-                        text = when (cardType) {
-                            CardUtils.CardType.VISA -> "VISA"
-                            CardUtils.CardType.MASTERCARD -> "MC"
-                            CardUtils.CardType.AMEX -> "AMEX"
-                            else -> ""
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.semantics { 
-                            contentDescription = "Detected card type: ${when (cardType) {
+                    Surface(
+                        shape = MaterialTheme.shapes.small,
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        modifier = Modifier.padding(end = 8.dp)
+                    ) {
+                        Text(
+                            text = when (cardType) {
                                 CardUtils.CardType.VISA -> "Visa"
                                 CardUtils.CardType.MASTERCARD -> "Mastercard"
-                                CardUtils.CardType.AMEX -> "American Express"
+                                CardUtils.CardType.AMEX -> "Amex"
                                 else -> ""
-                            }}"
-                        }
-                    )
+                            },
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                .semantics {
+                                    contentDescription = "Detected card type: ${when (cardType) {
+                                        CardUtils.CardType.VISA -> "Visa"
+                                        CardUtils.CardType.MASTERCARD -> "Mastercard"
+                                        CardUtils.CardType.AMEX -> "American Express"
+                                        else -> ""
+                                    }}"
+                                }
+                        )
+                    }
                 }
             }
         )

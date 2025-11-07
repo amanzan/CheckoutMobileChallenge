@@ -73,7 +73,7 @@ app/src/main/java/com/checkout/mobilechallenge/albertomanzano/
 
 ### Card Input & Validation
 - Real-time card number formatting (Visa/Mastercard: 4-4-4-4, Amex: 4-6-5)
-- Automatic card type detection (Visa, Mastercard, Amex)
+- Automatic card type detection with text badge showing card type (Visa, Mastercard, Amex)
 - Luhn algorithm validation for card numbers
 - Expiry date validation (MM/YY format, future dates only)
 - CVV validation (3 digits for Visa/MC, 4 for Amex)
@@ -202,11 +202,11 @@ While the current implementation covers all requirements, potential enhancements
 
 - **Security**: Move API keys to secure storage (Android Keystore), implement certificate pinning
 - **Card Validation**: Support for additional card schemes (Discover, JCB), BIN lookup
-- **User Experience**: Card scheme icons, payment amount input, saved cards support
+- **User Experience**: Payment amount input, saved cards support, card scanning via camera
 - **Network Resilience**: Exponential backoff for retries, offline mode detection with connectivity listener
-- **Error Handling**: Retry mechanisms, offline handling
 - **Performance**: Request caching, WebView optimization
 - **Localization**: Multi-language support, locale-based formatting
+- **Analytics**: Payment flow tracking, error monitoring
 
 ## 📚 Dependencies
 

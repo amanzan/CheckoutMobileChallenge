@@ -81,7 +81,11 @@ fun MainNavigation() {
                     }
                 },
                 onDismiss = {
-                    navController.popBackStack()
+                    // Cancel 3DS process and return to card input screen
+                    navController.navigate("card_input") {
+                        popUpTo("card_input") { inclusive = true }
+                        launchSingleTop = true
+                    }
                 },
                 paymentErrorBefore3DS = paymentErrorBefore3DS,
                 paymentId = paymentId
@@ -115,7 +119,7 @@ fun MainNavigation() {
         )) { backStackEntry ->
             // Get error message from navigation arguments and decode it
             val encodedError = backStackEntry.arguments?.getString("errorMessage")
-            var errorMessage = encodedError?.let { java.net.URLDecoder.decode(it, "UTF-8") }
+            val errorMessage = encodedError?.let { java.net.URLDecoder.decode(it, "UTF-8") }
             // Get payment ID from navigation arguments and decode it
             val encodedPaymentId = backStackEntry.arguments?.getString("paymentId")
             val paymentId = encodedPaymentId?.let { java.net.URLDecoder.decode(it, "UTF-8") }
