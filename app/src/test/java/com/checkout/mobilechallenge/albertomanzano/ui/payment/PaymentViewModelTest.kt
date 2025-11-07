@@ -20,7 +20,6 @@ import org.junit.runner.RunWith
 import org.mockito.Mock
 import org.mockito.Mockito.*
 import org.mockito.junit.MockitoJUnitRunner
-import org.mockito.ArgumentMatchers.*
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(MockitoJUnitRunner::class)
@@ -59,6 +58,7 @@ class PaymentViewModelTest {
         assertNull(initialState.redirectUrl)
         assertNull(initialState.paymentId)
         assertNull(initialState.paymentErrorBefore3DS)
+        assertFalse(initialState.isNetworkError)
     }
 
     @Test
@@ -273,6 +273,112 @@ class PaymentViewModelTest {
         // Should not crash, error is logged but not propagated to UI state
         val state = viewModel.uiState.value
         assertNotNull(state)
+    }
+
+    @Test
+    fun `processPayment should detect IOException as network error`() = runTest {
+        val cardDetails = CardDetails("4242424242424242", "12", "30", "123")
+        val error = java.io.IOException("No connection")
+        `when`(processPaymentUseCase(cardDetails, 6540)).thenReturn(Result.failure(error))
+
+        viewModel.processPayment(cardDetails)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isLoading)
+        assertTrue(state.isNetworkError)
+        assertEquals("No internet connection. Please check your network and try again.", state.error)
+    }
+
+    @Test
+    fun `processPayment should detect UnknownHostException as network error`() = runTest {
+        val cardDetails = CardDetails("4242424242424242", "12", "30", "123")
+        val error = java.net.UnknownHostException("Unable to resolve host")
+        `when`(processPaymentUseCase(cardDetails, 6540)).thenReturn(Result.failure(error))
+
+        viewModel.processPayment(cardDetails)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isLoading)
+        assertTrue(state.isNetworkError)
+        assertEquals("No internet connection. Please check your network and try again.", state.error)
+    }
+
+    @Test
+    fun `retryPayment should reuse last card details and amount`() = runTest {
+        val cardDetails = CardDetails("4242424242424242", "12", "30", "123")
+        val customAmount = 10000
+        val error = java.io.IOException("No connection")
+        `when`(processPaymentUseCase(cardDetails, customAmount)).thenReturn(Result.failure(error))
+
+        // First attempt fails
+        viewModel.processPayment(cardDetails, customAmount)
+        advanceUntilIdle()
+
+        val stateAfterError = viewModel.uiState.value
+        assertTrue(stateAfterError.isNetworkError)
+
+        // Setup successful response for retry
+        `when`(processPaymentUseCase(cardDetails, customAmount)).thenReturn(
+            Result.success(PaymentResult.Success())
+        )
+
+        // Retry
+        viewModel.retryPayment()
+        advanceUntilIdle()
+
+        val stateAfterRetry = viewModel.uiState.value
+        assertFalse(stateAfterRetry.isLoading)
+        assertFalse(stateAfterRetry.isNetworkError)
+        assertTrue(stateAfterRetry.paymentResult is PaymentResult.Success)
+        verify(processPaymentUseCase, times(2)).invoke(cardDetails, customAmount)
+    }
+
+    @Test
+    fun `clearError should clear network error flag`() = runTest {
+        val cardDetails = CardDetails("4242424242424242", "12", "30", "123")
+        val error = java.io.IOException("No connection")
+        `when`(processPaymentUseCase(cardDetails, 6540)).thenReturn(Result.failure(error))
+
+        viewModel.processPayment(cardDetails)
+        advanceUntilIdle()
+
+        var state = viewModel.uiState.value
+        assertTrue(state.isNetworkError)
+        assertNotNull(state.error)
+
+        viewModel.clearError()
+        advanceUntilIdle()
+
+        state = viewModel.uiState.value
+        assertFalse(state.isNetworkError)
+        assertNull(state.error)
+    }
+
+    @Test
+    fun `clearPaymentResult should clear network error flag`() = runTest {
+        val cardDetails = CardDetails("4242424242424242", "12", "30", "123")
+        val error = java.io.IOException("No connection")
+        `when`(processPaymentUseCase(cardDetails, 6540)).thenReturn(Result.failure(error))
+
+        viewModel.processPayment(cardDetails)
+        advanceUntilIdle()
+
+        var state = viewModel.uiState.value
+        assertTrue(state.isNetworkError)
+
+        viewModel.clearPaymentResult()
+        advanceUntilIdle()
+
+        state = viewModel.uiState.value
+        assertFalse(state.isNetworkError)
+    }
+
+    @Test
+    fun `initial state should have isNetworkError as false`() = runTest {
+        val initialState = viewModel.uiState.first()
+        assertFalse(initialState.isNetworkError)
     }
 }
 

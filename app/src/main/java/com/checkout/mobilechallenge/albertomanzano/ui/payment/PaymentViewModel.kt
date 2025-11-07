@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.io.IOException
+import java.net.UnknownHostException
 import javax.inject.Inject
 
 /**
@@ -23,6 +25,7 @@ import javax.inject.Inject
  * @param redirectUrl The 3DS redirect URL if payment is pending
  * @param paymentId The payment ID to retrieve details after 3DS completion
  * @param paymentErrorBefore3DS Error message from payment response before 3DS redirect
+ * @param isNetworkError True when the error is due to network connectivity issues
  */
 data class PaymentUiState(
     val isLoading: Boolean = false,
@@ -30,7 +33,8 @@ data class PaymentUiState(
     val paymentResult: PaymentResult? = null,
     val redirectUrl: String? = null,
     val paymentId: String? = null,
-    val paymentErrorBefore3DS: String? = null
+    val paymentErrorBefore3DS: String? = null,
+    val isNetworkError: Boolean = false
 )
 
 /**
@@ -46,6 +50,10 @@ class PaymentViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(PaymentUiState())
     val uiState: StateFlow<PaymentUiState> = _uiState.asStateFlow()
 
+    // Store last payment attempt for retry functionality
+    private var lastCardDetails: CardDetails? = null
+    private var lastAmount: Int = 6540
+
     /**
      * Processes a payment by delegating to the ProcessPaymentUseCase.
      * Updates UI state based on the payment result.
@@ -54,9 +62,13 @@ class PaymentViewModel @Inject constructor(
      * @param amount The payment amount in pence (default: 6540 = £65.40)
      */
     fun processPayment(cardDetails: CardDetails, amount: Int = 6540) {
+        // Store details for potential retry
+        lastCardDetails = cardDetails
+        lastAmount = amount
+
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null, isNetworkError = false)
+
             val paymentResult = processPaymentUseCase(cardDetails, amount)
             
             paymentResult.fold(
@@ -68,13 +80,15 @@ class PaymentViewModel @Inject constructor(
                                 paymentResult = result,
                                 redirectUrl = result.redirectUrl,
                                 paymentId = result.paymentId,
-                                paymentErrorBefore3DS = null
+                                paymentErrorBefore3DS = null,
+                                isNetworkError = false
                             )
                         }
                         is PaymentResult.Success -> {
                             _uiState.value.copy(
                                 isLoading = false,
-                                paymentResult = result
+                                paymentResult = result,
+                                isNetworkError = false
                             )
                         }
                         is PaymentResult.Failure -> {
@@ -82,18 +96,28 @@ class PaymentViewModel @Inject constructor(
                                 isLoading = false,
                                 paymentResult = result,
                                 error = result.message,
-                                paymentErrorBefore3DS = result.message
+                                paymentErrorBefore3DS = result.message,
+                                isNetworkError = false
                             )
                         }
                     }
                 },
                 onFailure = { error ->
                     Log.e("PaymentFlow", "Payment processing failed", error)
-                    val errorMessage = error.message ?: "Payment processing failed"
+
+                    // Detect network errors
+                    val isNetworkError = error is IOException || error is UnknownHostException
+                    val errorMessage = if (isNetworkError) {
+                        "No internet connection. Please check your network and try again."
+                    } else {
+                        error.message ?: "Payment processing failed"
+                    }
+
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         paymentResult = PaymentResult.Failure(errorMessage),
-                        error = errorMessage
+                        error = errorMessage,
+                        isNetworkError = isNetworkError
                     )
                 }
             )
@@ -101,10 +125,20 @@ class PaymentViewModel @Inject constructor(
     }
 
     /**
+     * Retries the last payment attempt using stored card details.
+     * Used when recovering from network errors.
+     */
+    fun retryPayment() {
+        lastCardDetails?.let { cardDetails ->
+            processPayment(cardDetails, lastAmount)
+        }
+    }
+
+    /**
      * Clears the current error state.
      */
     fun clearError() {
-        _uiState.value = _uiState.value.copy(error = null)
+        _uiState.value = _uiState.value.copy(error = null, isNetworkError = false)
     }
 
     /**
@@ -116,7 +150,8 @@ class PaymentViewModel @Inject constructor(
             paymentResult = null, 
             redirectUrl = null,
             paymentId = null,
-            paymentErrorBefore3DS = null
+            paymentErrorBefore3DS = null,
+            isNetworkError = false
         )
     }
     

@@ -110,7 +110,8 @@ fun CardInputScreen(
         // 1. There's a failure result
         // 2. No redirect URL (meaning no 3DS flow)
         // 3. Not currently loading
-        if (uiState.redirectUrl == null && !uiState.isLoading) {
+        // 4. Not a network error (handled separately)
+        if (uiState.redirectUrl == null && !uiState.isLoading && !uiState.isNetworkError) {
             (uiState.paymentResult as? com.checkout.mobilechallenge.albertomanzano.domain.model.PaymentResult.Failure)?.let { failure ->
                 onPaymentFailed(failure.message)
                 // Clear the result after navigating to prevent re-triggering
@@ -119,18 +120,101 @@ fun CardInputScreen(
         }
     }
 
+    // Show network error screen when there's no internet connection
+    if (uiState.isNetworkError) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .semantics { contentDescription = "No internet connection error card" },
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .padding(24.dp)
+                        .fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "No Internet Connection",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.semantics {
+                            contentDescription = "No internet connection title"
+                        }
+                    )
+
+                    Text(
+                        text = uiState.error ?: "Please check your network and try again.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.semantics {
+                            contentDescription = "Network error message"
+                        }
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Button(
+                            onClick = { viewModel.retryPayment() },
+                            modifier = Modifier
+                                .weight(1f)
+                                .semantics {
+                                    contentDescription = "Retry payment button"
+                                },
+                            enabled = !uiState.isLoading
+                        ) {
+                            if (uiState.isLoading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    color = MaterialTheme.colorScheme.onPrimary
+                                )
+                            } else {
+                                Text("Retry")
+                            }
+                        }
+
+                        OutlinedButton(
+                            onClick = { viewModel.clearError() },
+                            modifier = Modifier
+                                .weight(1f)
+                                .semantics {
+                                    contentDescription = "Dismiss error button"
+                                },
+                            enabled = !uiState.isLoading
+                        ) {
+                            Text("Dismiss")
+                        }
+                    }
+                }
+            }
+        }
+        return
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+            .padding(horizontal = 24.dp, vertical = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp, Alignment.Top),
+        horizontalAlignment = Alignment.Start
     ) {
         Text(
             text = "Card Payment",
             style = MaterialTheme.typography.headlineMedium,
             modifier = Modifier
-                .padding(bottom = 32.dp)
+                .padding(vertical = 24.dp)
                 .semantics { contentDescription = "Card Payment Screen Title" }
         )
         
@@ -147,7 +231,6 @@ fun CardInputScreen(
             placeholder = { Text("1234 5678 9012 3456") },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 16.dp)
                 .semantics { 
                     contentDescription = "Card number input field. Enter your ${if (cardType != CardUtils.CardType.UNKNOWN) when (cardType) {
                         CardUtils.CardType.VISA -> "Visa"
@@ -188,9 +271,7 @@ fun CardInputScreen(
         )
         
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp),
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Expiry Date Input

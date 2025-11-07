@@ -1,10 +1,10 @@
 # Checkout.com Mobile Challenge - 3D Secure Payment Implementation
 
-*Last updated: 2025-01-31*
+*Last updated: 2025-11-07*
 
 ## 📱 Overview
 
-This Android application implements a complete 3D Secure (3DS) payment flow using Jetpack Compose, following Clean Architecture principles. The app provides a seamless user experience for entering card details, tokenizing the card securely, processing payments with 3DS authentication, and handling verification results with detailed error feedback.
+This Android application implements a complete 3D Secure (3DS) payment flow using Jetpack Compose, following Clean Architecture principles. The app provides a seamless user experience for entering card details, tokenizing the card securely, processing payments with 3DS authentication, and handling verification results with detailed error feedback and graceful network error recovery.
 
 ## 🏗️ Architecture
 
@@ -86,11 +86,14 @@ app/src/main/java/com/checkout/mobilechallenge/albertomanzano/
 - WebView integration for 3DS verification
 - Success/failure detection from redirect URLs
 - **Detailed error handling**: Extracts specific error codes and messages from API responses and payment actions (e.g., "20051: Insufficient Funds")
+- **Network error recovery**: Dedicated error screen for connectivity issues with one-tap retry functionality
 
 ### User Experience
 - Material Design 3 components and theming
 - Loading states during API calls
 - Comprehensive error handling with user-friendly messages
+- **Graceful network error handling**: Full-screen error UI when no internet connection is detected
+- **Smart retry mechanism**: Automatically retries payment with stored card details (no re-entry needed)
 - Smooth navigation flow with proper back stack management
 - Clear success/failure feedback
 - **Accessibility**: Content descriptions and semantic labels for screen readers
@@ -122,13 +125,13 @@ app/src/main/java/com/checkout/mobilechallenge/albertomanzano/
 
 ## 🧪 Testing
 
-### Unit Tests (5 test files, 70+ test cases)
-- **CardUtilsTest**: 40+ test cases covering all validation logic (Luhn algorithm, card type detection, expiry/CVV validation)
-- **PaymentViewModelTest**: 15+ test cases covering payment flow, error handling, and state management
+### Unit Tests (5 test files, 79+ test cases)
+- **CardUtilsTest**: 42 test cases covering all validation logic (Luhn algorithm, card type detection, expiry/CVV validation, formatting)
+- **PaymentViewModelTest**: 20 test cases covering payment flow, error handling, network error detection, retry mechanism, and state management
 - **Use Case Tests**: 17 test cases covering all three use cases with proper mocking
 
-### UI Tests (2 test files, 15 test cases)
-- **CardInputScreenTest**: 13 test cases covering UI validation, formatting, card type detection, and user interactions
+### UI Tests (2 test files, 18 test cases)
+- **CardInputScreenTest**: 16 test cases covering UI validation, formatting, card type detection, user interactions, and network error UI structure
 - **PaymentFlowTest**: 2 integration test cases covering the complete payment flow
 
 All tests use proper coroutine testing with `TestDispatcher`, Mockito for mocking, and Hilt test runner for instrumentation tests.
@@ -191,6 +194,7 @@ The keys would be excluded from version control via `.gitignore` and managed thr
 3. **Success/Failure URLs**: Using `example.com/payments/success` and `example.com/payments/fail` as specified
 4. **Card Schemes**: Focused on Visa, Mastercard, and Amex (most common schemes)
 5. **Error Handling**: Detailed error messages extracted from API responses, including error codes when available. Falls back to payment actions endpoint for more specific error information when needed.
+6. **Network Error Recovery**: Separate UI for network connectivity issues (IOException, UnknownHostException) with automatic retry using stored payment details, preventing user frustration from re-entering card information.
 
 ## 🚀 Future Enhancements
 
@@ -199,6 +203,7 @@ While the current implementation covers all requirements, potential enhancements
 - **Security**: Move API keys to secure storage (Android Keystore), implement certificate pinning
 - **Card Validation**: Support for additional card schemes (Discover, JCB), BIN lookup
 - **User Experience**: Card scheme icons, payment amount input, saved cards support
+- **Network Resilience**: Exponential backoff for retries, offline mode detection with connectivity listener
 - **Error Handling**: Retry mechanisms, offline handling
 - **Performance**: Request caching, WebView optimization
 - **Localization**: Multi-language support, locale-based formatting
